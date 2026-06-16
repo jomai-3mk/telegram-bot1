@@ -10,7 +10,6 @@ if not TOKEN:
 teachers = set()
 students = set()
 
-# القائمة الرئيسية
 main_keyboard = ReplyKeyboardMarkup(
     [
         ["🛠️ خدمات"],
@@ -19,7 +18,6 @@ main_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# قائمة الخدمات
 services_keyboard = ReplyKeyboardMarkup(
     [
         ["🚻", "🍔"],
@@ -29,7 +27,6 @@ services_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-# قائمة الحيوانات
 animals_keyboard = ReplyKeyboardMarkup(
     [
         ["🌲 الغابة"],
@@ -48,9 +45,9 @@ message_map = {
 }
 
 animal_map = {
-    "🌲 الغابة": "اختار نشاط الغابة",
-    "🏜️ الصحراء": "اختار نشاط الصحراء",
-    "🌊 البحر": "اختار نشاط البحر"
+    "🌲 الغابة": "الطالب اختار نشاط الغابة",
+    "🏜️ الصحراء": "الطالب اختار نشاط الصحراء",
+    "🌊 البحر": "الطالب اختار نشاط البحر"
 }
 
 
@@ -69,7 +66,6 @@ async def teacher(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_chat.id
     teachers.add(uid)
     students.discard(uid)
-
     await update.message.reply_text("تم تسجيلك كمدرس")
 
 
@@ -77,7 +73,6 @@ async def student(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_chat.id
     students.add(uid)
     teachers.discard(uid)
-
     await update.message.reply_text("تم تحويلك إلى طالب")
 
 
@@ -85,49 +80,44 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     uid = update.effective_chat.id
 
-    # فتح قائمة الخدمات
+    # قائمة الخدمات
     if text == "🛠️ خدمات":
-        await update.message.reply_text(
-            "اختر خدمة:",
-            reply_markup=services_keyboard
-        )
+        await update.message.reply_text("اختر خدمة:", reply_markup=services_keyboard)
         return
 
-    # فتح قائمة الحيوانات
+    # قائمة الحيوانات
     if text == "🐾 نشاط الحيوانات":
-        await update.message.reply_text(
-            "اختر البيئة:",
-            reply_markup=animals_keyboard
-        )
+        await update.message.reply_text("اختر البيئة:", reply_markup=animals_keyboard)
         return
 
-    # الرجوع للقائمة الرئيسية
+    # رجوع
     if text == "🔙 رجوع":
-        await update.message.reply_text(
-            "القائمة الرئيسية:",
-            reply_markup=main_keyboard
-        )
+        await update.message.reply_text("القائمة الرئيسية:", reply_markup=main_keyboard)
         return
 
-    # نشاط الحيوانات
-    if text in animal_map:
-        await update.message.reply_text(animal_map[text])
-        return
-
-    # الخدمات
+    # الخدمات → إرسال للمعلمين
     if text in message_map:
-
         if uid in teachers:
             await update.message.reply_text("أنت مدرس")
             return
 
         for t in teachers:
-            await context.bot.send_message(
-                chat_id=t,
-                text=message_map[text]
-            )
+            await context.bot.send_message(chat_id=t, text=message_map[text])
 
-        await update.message.reply_text("تم الإرسال")
+        await update.message.reply_text("تم إرسال طلبك للمعلم")
+        return
+
+    # الحيوانات → إرسال للمعلمين (التعديل الأساسي)
+    if text in animal_map:
+        if uid in teachers:
+            await update.message.reply_text("أنت مدرس")
+            return
+
+        for t in teachers:
+            await context.bot.send_message(chat_id=t, text=animal_map[text])
+
+        await update.message.reply_text("تم إرسال نشاطك للمعلم")
+        return
 
 
 def main():
