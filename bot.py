@@ -1,6 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import os
+import asyncio
 
 TOKEN = os.getenv("TOKEN")
 
@@ -11,29 +12,17 @@ teachers = set()
 students = set()
 
 main_keyboard = ReplyKeyboardMarkup(
-    [
-        ["🛠️ خدمات"],
-        ["🐾 نشاط الحيوانات"]
-    ],
+    [["🛠️ خدمات"], ["🐾 نشاط الحيوانات"]],
     resize_keyboard=True
 )
 
 services_keyboard = ReplyKeyboardMarkup(
-    [
-        ["🚻", "🍔"],
-        ["💧", "🆘"],
-        ["🔙 رجوع"]
-    ],
+    [["🚻", "🍔"], ["💧", "🆘"], ["🔙 رجوع"]],
     resize_keyboard=True
 )
 
 animals_keyboard = ReplyKeyboardMarkup(
-    [
-        ["🌲 الغابة"],
-        ["🏜️ الصحراء"],
-        ["🌊 البحر"],
-        ["🔙 رجوع"]
-    ],
+    [["🌲 الغابة"], ["🏜️ الصحراء"], ["🌊 البحر"], ["🔙 رجوع"]],
     resize_keyboard=True
 )
 
@@ -56,16 +45,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     students.add(uid)
     teachers.discard(uid)
 
-    await update.message.reply_text(
-        "اختر من القائمة:",
-        reply_markup=main_keyboard
-    )
+    await update.message.reply_text("اختر:", reply_markup=main_keyboard)
 
 
 async def teacher(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_chat.id
     teachers.add(uid)
     students.discard(uid)
+
     await update.message.reply_text("تم تسجيلك كمدرس")
 
 
@@ -73,6 +60,7 @@ async def student(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_chat.id
     students.add(uid)
     teachers.discard(uid)
+
     await update.message.reply_text("تم تحويلك إلى طالب")
 
 
@@ -80,22 +68,19 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     uid = update.effective_chat.id
 
-    # قائمة الخدمات
     if text == "🛠️ خدمات":
         await update.message.reply_text("اختر خدمة:", reply_markup=services_keyboard)
         return
 
-    # قائمة الحيوانات
     if text == "🐾 نشاط الحيوانات":
-        await update.message.reply_text("اختر البيئة:", reply_markup=animals_keyboard)
+        await update.message.reply_text("اختر بيئة:", reply_markup=animals_keyboard)
         return
 
-    # رجوع
     if text == "🔙 رجوع":
-        await update.message.reply_text("القائمة الرئيسية:", reply_markup=main_keyboard)
+        await update.message.reply_text("القائمة:", reply_markup=main_keyboard)
         return
 
-    # الخدمات → إرسال للمعلمين
+    # خدمات
     if text in message_map:
         if uid in teachers:
             await update.message.reply_text("أنت مدرس")
@@ -104,10 +89,10 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for t in teachers:
             await context.bot.send_message(chat_id=t, text=message_map[text])
 
-        await update.message.reply_text("تم إرسال طلبك للمعلم")
+        await update.message.reply_text("تم الإرسال")
         return
 
-    # الحيوانات → إرسال للمعلمين (التعديل الأساسي)
+    # الحيوانات (هنا التعديل المهم)
     if text in animal_map:
         if uid in teachers:
             await update.message.reply_text("أنت مدرس")
@@ -116,7 +101,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for t in teachers:
             await context.bot.send_message(chat_id=t, text=animal_map[text])
 
-        await update.message.reply_text("تم إرسال نشاطك للمعلم")
+        await update.message.reply_text("تم الإرسال")
         return
 
 
@@ -129,7 +114,9 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
     print("BOT RUNNING")
-    app.run_polling()
+
+    # مهم جداً للـ Render / Railway
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
